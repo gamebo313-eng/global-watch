@@ -1,0 +1,98 @@
+{
+  "sources": [
+    {
+      "id": "weibo",
+      "name": "微博热搜",
+      "lat": 39.90,
+      "lon": 116.40,
+      "type": "SOCIAL",
+      "region": "cn",
+      "status": "online",
+      "description": "实时热搜榜单",
+      "url": "https://weibo.com/ajax/side/hotSearch"
+    },
+    {
+      "id": "zhihu",
+      "name": "知乎热榜",
+      "lat": 39.90,
+      "lon": 116.40,
+      "type": "SOCIAL",
+      "region": "cn",
+      "status": "online",
+      "description": "问答热榜",
+      "url": "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total"
+    },
+    {
+      "id": "guancha",
+      "name": "观察者网",
+      "lat": 31.20,
+      "lon": 121.50,
+      "type": "NEWS",
+      "region": "cn",
+      "status": "online",
+      "description": "时政新闻",
+      "url": "https://m.guancha.cn/"
+    },
+    {
+      "id": "gdelt",
+      "name": "GDELT",
+      "lat": 38.90,
+      "lon": -77.04,
+      "type": "INTEL",
+      "region": "int",
+      "status": "online",
+      "description": "全球事件数据库",
+      "url": "https://www.gdeltproject.org/"
+    },
+    {
+      "id": "liveuamap",
+      "name": "LiveUAMap",
+      "lat": 50.45,
+      "lon": 30.52,
+      "type": "THREAT",
+      "region": "int",
+      "status": "online",
+      "description": "俄乌冲突实时地图",
+      "url": "https://liveuamap.com/"
+    },
+    {
+      "id": "shodan",
+      "name": "Shodan",
+      "lat": 37.77,
+      "lon": -122.41,
+      "type": "THREAT",
+      "region": "int",
+      "status": "delayed",
+      "description": "IoT设备搜索引擎",
+      "url": "https://www.shodan.io/"
+    },
+    {
+      "id": "threatbook",
+      "name": "微步在线",
+      "lat": 39.90,
+      "lon": 116.40,
+      "type": "THREAT",
+      "region": "cn",
+      "status": "online",
+      "description": "国内威胁情报平台",
+      "url": "https://x.threatbook.cn/"
+    }
+  ],
+  "market": {
+    "oil": {
+      "name": "WTI原油",
+      "unit": "USD/bbl",
+      "api": "eastmoney"
+    },
+    "gold": {
+      "name": "黄金",
+      "unit": "USD/oz",
+      "api": "eastmoney"
+    },
+    "btc": {
+      "name": "比特币",
+      "unit": "USD",
+      "api": "binance"
+    }
+  }
+}

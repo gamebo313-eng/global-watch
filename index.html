@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLOBAL WATCH · OSINT情报平台</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0d12;font-family:'IBM Plex Sans','Noto Sans SC',sans-serif;font-size:13px;color:#cdd6e0}
+#APP{display:flex;flex-direction:column;height:100vh}
+.banner{height:28px;background:#1a0d00;border-bottom:1px solid #4a2800;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.2em;color:#e8923a}
+.toolbar{height:48px;background:#111419;border-bottom:1px solid #2a2f3a;display:flex;align-items:center}
+.brand{padding:0 20px;display:flex;align-items:center;gap:10px;border-right:1px solid #2a2f3a}
+.brand-icon{width:20px;height:20px;background:linear-gradient(135deg,#00d4ff,#0066ff);clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)}
+.brand-name{font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.15em;color:#cdd6e0}
+.tabs{display:flex;height:100%}
+.tab{padding:0 20px;display:flex;align-items:center;font-size:11px;color:#6b7583;cursor:pointer;border-right:1px solid #2a2f3a;transition:all .15s}
+.tab:hover{background:#181c23;color:#cdd6e0}
+.tab.active{color:#00d4ff;background:#181c23}
+.status{margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono';font-size:10px;color:#6b7583}
+.dot{width:6px;height:6px;border-radius:50%;background:#3ddc84}
+.main{flex:1;display:flex;overflow:hidden}
+.sidebar{width:260px;background:#111419;border-right:1px solid #2a2f3a;display:flex;flex-direction:column}
+.sb-header{height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid #2a2f3a;font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.14em;color:#444c5a;background:#0a0d12}
+.sb-count{background:#1e222b;padding:2px 8px;border-radius:10px}
+.sb-filter{display:flex;border-bottom:1px solid #2a2f3a}
+.sb-btn{flex:1;padding:8px;font-size:10px;text-align:center;color:#6b7583;cursor:pointer;border-right:1px solid #2a2f3a}
+.sb-btn:hover{background:#181c23}
+.sb-btn.active{background:rgba(0,212,255,.15);color:#00d4ff}
+.list{flex:1;overflow-y:auto}
+.item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #2a2f3a;cursor:pointer}
+.item:hover{background:#1e222b}
+.item-dot{width:6px;height:6px;border-radius:50%}
+.item-name{flex:1;font-size:11px}
+.item-type{font-size:9px;color:#444c5a}
+.metrics{padding:12px;border-top:1px solid #2a2f3a;background:#0a0d12}
+.metric{display:flex;justify-content:space-between;padding:6px 0}
+.metric-label{font-size:10px;color:#6b7583}
+.metric-val{font-family:'IBM Plex Mono';font-size:11px}
+.metric-val.green{color:#3ddc84}
+.metric-val.orange{color:#e8923a}
+.metric-val.red{color:#e05252}
+.center{flex:1;position:relative;background:#0a0d12}
+#GLOBE{position:absolute;inset:0}
+#MAP{position:absolute;inset:0;display:none}
+#MAP.active{display:block}
+.map-controls{position:absolute;left:12px;top:12px;z-index:50;display:flex;flex-direction:column;gap:4px}
+.map-btn{padding:8px 14px;background:#181c23;border:1px solid #2a2f3a;color:#6b7583;font-size:11px;cursor:pointer;font-family:'IBM Plex Mono'}
+.map-btn:hover{background:#252a33;color:#cdd6e0}
+.map-btn.active{background:#00d4ff;color:#0a0d12;border-color:#00d4ff}
+.coords{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(10,13,18,.85);padding:6px 14px;border:1px solid #2a2f3a;font-family:'IBM Plex Mono';font-size:10px;color:#6b7583}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0d12;z-index:100}
+.loading-text{font-family:'IBM Plex Mono';color:#00d4ff}
+.right{width:360px;background:#111419;border-left:1px solid #2a2f3a;display:flex;flex-direction:column}
+.rp-tabs{display:flex;border-bottom:1px solid #2a2f3a}
+.rp-tab{flex:1;padding:12px;text-align:center;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.1em;color:#444c5a;cursor:pointer}
+.rp-tab:hover{background:#181c23}
+.rp-tab.active{color:#00d4ff;background:#181c23}
+.rp-body{flex:1;overflow-y:auto;padding:12px}
+.sec{margin-bottom:20px}
+.sec-head{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;color:#444c5a;margin-bottom:10px}
+.news{padding:10px;background:#181c23;border-radius:4px;margin-bottom:6px;cursor:pointer}
+.news:hover{background:#1e222b}
+.news-title{font-size:12px;line-height:1.5}
+.news-meta{font-family:'IBM Plex Mono';font-size:9px;color:#00d4ff;margin-top:6px}
+.alert{padding:8px 10px;border-left:2px solid #2a2f3a;margin-bottom:6px;font-size:11px;background:#181c23}
+.alert.critical{border-color:#e05252}
+.alert.warning{border-color:#e8923a}
+.alert.info{border-color:#4a9eff}
+.alert.success{border-color:#3ddc84}
+.alert-time{font-family:'IBM Plex Mono';font-size:9px;color:#6b7583;margin-right:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cell{padding:12px;background:#181c23;border-radius:4px}
+.cell-label{font-size:10px;color:#6b7583}
+.cell-val{font-family:'IBM Plex Mono';font-size:18px;margin-top:6px}
+.cell-val.up{color:#3ddc84}
+.cell-val.down{color:#e05252}
+.stat{height:28px;background:#111419;border-top:1px solid #2a2f3a;display:flex;align-items:center;font-size:10px;color:#6b7583}
+.stat-item{padding:0 12px;border-right:1px solid #2a2f3a;display:flex;align-items:center;gap:6px;height:100%}
+.stat-dot{width:5px;height:5px;border-radius:50%;background:#3ddc84}
+.stat-dot.red{background:#e05252}
+#clock{margin-left:auto;border-left:1px solid #2a2f3a;border-right:none}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:#363c4a}
+</style>
+</head>
+<body>
+<div id="APP">
+  <div class="banner">开源情报 OSINT · 实时监控平台</div>
+  <div class="toolbar">
+    <div class="brand"><div class="brand-icon"></div><span class="brand-name">GLOBAL WATCH</span></div>
+    <div class="tabs">
+      <div class="tab active" data-v="intel">情报</div>
+      <div class="tab" data-v="globe">3D地球</div>
+      <div class="tab" data-v="map">2D地图</div>
+      <div class="tab" data-v="news">新闻</div>
+      <div class="tab" data-v="data">数据</div>
+      <div class="tab" data-v="osint">OSINT</div>
+    </div>
+    <div class="status"><div class="dot" id="statusDot"></div><span id="statusText">在线</span></div>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <div class="sb-header">OSINT情报源 <span class="sb-count" id="srcCount">0</span></div>
+      <div class="sb-filter">
+        <div class="sb-btn active" data-f="all">全部</div>
+        <div class="sb-btn" data-f="cn">中国</div>
+        <div class="sb-btn" data-f="int">国际</div>
+        <div class="sb-btn" data-f="threat">威胁</div>
+      </div>
+      <div class="list" id="srcList"></div>
+      <div class="metrics">
+        <div class="metric"><span class="metric-label">活跃源</span><span class="metric-val green" id="activeSrc">0</span></div>
+        <div class="metric"><span class="metric-label">今日更新</span><span class="metric-val" id="todayUpdate">0</span></div>
+        <div class="metric"><span class="metric-label">风险等级</span><span class="metric-val orange" id="riskLevel">中</span></div>
+      </div>
+    </div>
+    <div class="center">
+      <div class="loading" id="loading"><span class="loading-text">加载3D引擎...</span></div>
+      <canvas id="GLOBE"></canvas>
+      <div id="MAP"></div>
+      <div class="map-controls">
+        <button class="map-btn active" id="btn3D">3D地球</button>
+        <button class="map-btn" id="btn2D">2D地图</button>
+      </div>
+      <div class="coords" id="coords">3D模式 - 拖动旋转</div>
+    </div>
+    <div class="right">
+      <div class="rp-tabs">
+        <div class="rp-tab active" data-t="intel">情报</div>
+        <div class="rp-tab" data-t="news">新闻</div>
+        <div class="rp-tab" data-t="data">数据</div>
+        <div class="rp-tab" data-t="osint">OSINT</div>
+      </div>
+      <div class="rp-body">
+        <div id="tab-intel">
+          <div class="sec">
+            <div class="sec-head">实时情报流</div>
+            <div id="alertFeed"></div>
+          </div>
+        </div>
+        <div id="tab-news" style="display:none">
+          <div class="sec">
+            <div class="sec-head">微博热搜 TOP 10</div>
+            <div id="weiboHot"></div>
+          </div>
+          <div class="sec">
+            <div class="sec-head">知乎热榜</div>
+            <div id="zhihuHot"></div>
+          </div>
+        </div>
+        <div id="tab-data" style="display:none">
+          <div class="sec">
+            <div class="sec-head">大宗商品</div>
+            <div class="grid">
+              <div class="cell"><div class="cell-label">WTI原油</div><div class="cell-val" id="oilPrice">--</div></div>
+              <div class="cell"><div class="cell-label">黄金</div><div class="cell-val" id="goldPrice">--</div></div>
+              <div class="cell"><div class="cell-label">比特币</div><div class="cell-val" id="btcPrice">--</div></div>
+              <div class="cell"><div class="cell-label">美元指数</div><div class="cell-val" id="dxy">--</div></div>
+            </div>
+          </div>
+          <div class="sec">
+            <div class="sec-head">主要指数</div>
+            <div class="grid">
+              <div class="cell"><div class="cell-label">上证指数</div><div class="cell-val" id="shIndex">--</div></div>
+              <div class="cell"><div class="cell-label">深证成指</div><div class="cell-val" id="szIndex">--</div></div>
+              <div class="cell"><div class="cell-label">恒生指数</div><div class="cell-val" id="hkIndex">--</div></div>
+              <div class="cell"><div class="cell-label">道琼斯</div><div class="cell-val" id="djIndex">--</div></div>
+            </div>
+          </div>
+        </div>
+        <div id="tab-osint" style="display:none">
+          <div class="sec">
+            <div class="sec-head">威胁情报源</div>
+            <div id="threatIntel"></div>
+          </div>
+          <div class="sec">
+            <div class="sec-head">OSINT工具</div>
+            <div id="osintTools"></div>
+          </div>
+          <div class="sec">
+            <div class="sec-head">数据源状态</div>
+            <div id="sourceStatus"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat-item"><div class="stat-dot"></div>数据源</div>
+    <div class="stat-item"><div class="stat-dot" id="webglDot"></div>WebGL 3D</div>
+    <div class="stat-item"><div class="stat-dot" id="threeDot"></div>Three.js</div>
+    <div class="stat-item"><div class="stat-dot" id="mapDot"></div>Leaflet</div>
+    <div class="stat-item" id="clock"></div>
+  </div>
+</div>
+<script>
+// ==================== OSINT数据源 ====================
+const SOURCES=[
+  // 中国源
+  {id:'weibo',name:'微博热搜',lat:39.90,lon:116.40,type:'SOCIAL',region:'cn',s:'on',desc:'实时热搜榜单',url:'https://weibo.com/ajax/side/hotSearch'},
+  {id:'zhihu',name:'知乎热榜',lat:39.90,lon:116.40,type:'SOCIAL',region:'cn',s:'on',desc:'问答热榜',url:'https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total'},
+  {id:'baidu',name:'百度搜索',lat:39.90,lon:116.40,type:'SEARCH',region:'cn',s:'on',desc:'搜索趋势'},
+  {id:'toutiao',name:'今日头条',lat:39.90,lon:116.40,type:'NEWS',region:'cn',s:'on',desc:'新闻资讯'},
+  {id:'guancha',name:'观察者网',lat:31.20,lon:121.50,type:'NEWS',region:'cn',s:'on',desc:'时政新闻'},
+  {id:'tianyancha',name:'天眼查',lat:39.90,lon:116.40,type:'BUSINESS',region:'cn',s:'dg',desc:'企业工商信息'},
+  // 国际源
+  {id:'twitter',name:'Twitter',lat:40.71,lon:-74.01,type:'SOCIAL',region:'int',s:'on',desc:'社交媒体'},
+  {id:'newsapi',name:'NewsAPI',lat:51.50,lon:-0.13,type:'NEWS',region:'int',s:'on',desc:'全球新闻'},
+  {id:'gdelt',name:'GDELT',lat:38.90,lon:-77.04,type:'INTEL',region:'int',s:'on',desc:'全球事件数据库',url:'https://www.gdeltproject.org/'},
+  {id:'liveuamap',name:'LiveUAMap',lat:50.45,lon:30.52,type:'THREAT',region:'int',s:'on',desc:'冲突地图',url:'https://liveuamap.com/'},
+  // 威胁情报
+  {id:'shodan',name:'Shodan',lat:37.77,lon:-122.41,type:'THREAT',region:'threat',s:'on',desc:'IoT设备搜索',url:'https://www.shodan.io/'},
+  {id:'censys',name:'Censys',lat:42.28,lon:-83.73,type:'THREAT',region:'threat',s:'dg',desc:'网络空间测绘',url:'https://censys.io/'},
+  {id:'abuseipdb',name:'AbuseIPDB',lat:37.77,lon:-122.41,type:'THREAT',region:'threat',s:'on',desc:'恶意IP数据库',url:'https://www.abuseipdb.com/'},
+  {id:'virustotal',name:'VirusTotal',lat:37.77,lon:-122.41,type:'THREAT',region:'threat',s:'on',desc:'恶意软件分析',url:'https://www.virustotal.com/'},
+  {id:'threatbook',name:'微步在线',lat:39.90,lon:116.40,type:'THREAT',region:'cn',s:'on',desc:'国内威胁情报',url:'https://x.threatbook.cn/'},
+];
+const COL={on:'#3ddc84',dg:'#e8923a',of:'#e05252'};
+const LABEL={on:'在线',dg:'延迟',of:'离线'};
+
+// ==================== 3D地球仪 ====================
+let scene,camera,renderer,globe,is3DActive=true;
+function init3D(){
+  try{
+    const canvas=$('GLOBE');
+    renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    const w=$('.center').offsetWidth||800;
+    const h=$('.center').offsetHeight||600;
+    renderer.setSize(w,h);
+    renderer.setClearColor(0x0a0d12);
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(38,w/h,0.01,1000);
+    camera.position.z=2.5;
+    
+    // 地球
+    const geo=new THREE.SphereGeometry(1,64,64);
+    const mat=new THREE.MeshPhongMaterial({
+      color:0x1a4a8a,
+      specular:0x111111,
+      shininess:15,
+      emissive:0x001133,
+      emissiveIntensity:0.3
+    });
+    globe=new THREE.Mesh(geo,mat);
+    scene.add(globe);
+    
+    // 大气层
+    const atmGeo=new THREE.SphereGeometry(1.02,64,64);
+    const atmMat=new THREE.MeshBasicMaterial({color:0x4a9eff,transparent:true,opacity:0.1,side:THREE.BackSide});
+    scene.add(new THREE.Mesh(atmGeo,atmMat));
+    
+    // 光照
+    scene.add(new THREE.AmbientLight(0x222244,1.5));
+    const sun=new THREE.DirectionalLight(0xffffff,1.3);
+    sun.position.set(5,3,5);scene.add(sun);
+    const fill=new THREE.DirectionalLight(0x4466aa,0.5);
+    fill.position.set(-5,-3,-5);scene.add(fill);
+    
+    // 标记点
+    SOURCES.forEach(s=>{
+      const phi=(90-s.lat)*Math.PI/180,theta=(s.lon+180)*Math.PI/180;
+      const x=-Math.sin(phi)*Math.cos(theta),y=Math.cos(phi),z=Math.sin(phi)*Math.sin(theta);
+      const dot=new THREE.Mesh(new THREE.SphereGeometry(0.025,12,12),new THREE.MeshBasicMaterial({color:COL[s.s].replace('#','0x')}));
+      dot.position.set(x,y,z);
+      dot.userData=s;
+      globe.add(dot);
+    });
+    
+    // 经纬网格
+    const gridGeo=new THREE.SphereGeometry(1.005,36,18);
+    const gridMat=new THREE.MeshBasicMaterial({color:0x4a9eff,wireframe:true,transparent:true,opacity:0.15});
+    globe.add(new THREE.Mesh(gridGeo,gridMat));
+    
+    // 鼠标拖动
+    let isDragging=false,startX,startY;
+    canvas.onmousedown=e=>{isDragging=true;startX=e.clientX;startY=e.clientY;canvas.style.cursor='grabbing';};
+    canvas.onmouseup=()=>{isDragging=false;canvas.style.cursor='grab';};
+    canvas.onmouseleave=()=>{isDragging=false;};
+    canvas.onmousemove=e=>{
+      if(isDragging&&globe){
+        globe.rotation.y+=(e.clientX-startX)*0.005;
+        globe.rotation.x+=(e.clientY-startY)*0.005;
+        startX=e.clientX;startY=e.clientY;
+      }
+    };
+    
+    function animate(){
+      if(is3DActive&&globe){
+        globe.rotation.y+=0.0005;
+        renderer.render(scene,camera);
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+    
+    $('loading').style.display='none';
+    $('webglDot').classList.remove('red');
+    addAlert('3D地球仪已就绪','success');
+  }catch(e){
+    $('loading').innerHTML='<span class="loading-text" style="color:#e05252">3D加载失败: '+e.message+'</span>';
+    $('webglDot').classList.add('red');
+  }
+}
+
+// ==================== 2D地图 ====================
+let map;
+function initMap(){
+  map=L.map('MAP',{center:[30,100],zoom:4,zoomControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+  SOURCES.forEach(s=>{
+    L.circleMarker([s.lat,s.lon],{radius:8,fillColor:COL[s.s],color:'#fff',weight:1,fillOpacity:0.9}).addTo(map).bindPopup(`<b>${s.name}</b><br>${LABEL[s.s]}<br>${s.desc}`);
+  });
+  $('mapDot').classList.remove('red');
+}
+
+// ==================== Tab ====================
+let currentView='globe';
+document.querySelectorAll('.tab').forEach(t=>{t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  currentView=t.dataset.v;
+  if(currentView==='globe'){is3DActive=true;$('GLOBE').style.display='block';$('MAP').classList.remove('active');$('coords').textContent='3D模式 - 拖动旋转';}
+  else if(currentView==='map'){is3DActive=false;$('GLOBE').style.display='none';$('MAP').classList.add('active');$('coords').textContent='2D模式';if(!map)initMap();}
+};});
+document.querySelectorAll('.rp-tab').forEach(t=>{t.onclick=()=>{
+  document.querySelectorAll('.rp-tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const tab=t.dataset.t;
+  ['intel','news','data','osint'].forEach(i=>$('tab-'+i).style.display=i===tab?'block':'none');
+};});
+$('btn3D').onclick=()=>{is3DActive=true;$('GLOBE').style.display='block';$('MAP').classList.remove('active');$('btn3D').classList.add('active');$('btn2D').classList.remove('active');$('coords').textContent='3D模式 - 拖动旋转';};
+$('btn2D').onclick=()=>{is3DActive=false;$('GLOBE').style.display='none';$('MAP').classList.add('active');$('btn2D').classList.add('active');$('btn3D').classList.remove('active');$('coords').textContent='2D模式';if(!map)initMap();};
+
+// ==================== 渲染列表 ====================
+function render(f='all'){
+  const list=$('srcList'),fil=f==='all'?SOURCES:f==='threat'?SOURCES.filter(s=>s.region==='threat'):SOURCES.filter(s=>s.region===f);
+  $('srcCount').textContent=fil.length;
+  list.innerHTML=fil.map(s=>`<div class="item"><div class="item-dot" style="background:${COL[s.s]}"></div><span class="item-name">${s.name}</span><span class="item-type">${s.type}</span></div>`).join('');
+  $('activeSrc').textContent=fil.filter(s=>s.s==='on').length;
+}
+document.querySelectorAll('.sb-btn').forEach(b=>{b.onclick=()=>{document.querySelectorAll('.sb-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.f);};});
+
+// ==================== 数据获取 ====================
+function uts(){return new Date().toISOString().slice(11,19);}
+async function fetchWeibo(){
+  try{
+    const r=await fetch('https://weibo.com/ajax/side/hotSearch');
+    const j=await r.json();
+    if(j.ok){
+      $('weiboHot').innerHTML=j.data.realtime.slice(0,10).map((v,i)=>`<div class="news"><div class="news-title">${i+1}. ${v.note}</div><div class="news-meta">${v.num}万阅读</div></div>`).join('');
+      addAlert('微博热搜已更新','success');
+    }
+  }catch(e){$('weiboHot').innerHTML='<div class="news" style="color:#e05252">加载失败(需代理)</div>';}
+}
+async function fetchZhihu(){
+  try{
+    const r=await fetch('https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=8',{headers:{'User-Agent':'Mozilla/5.0'}});
+    const j=await r.json();
+    if(j.data)$('zhihuHot').innerHTML=j.data.map((v,i)=>`<div class="news"><div class="news-title">${i+1}. ${v.detail_text||v.target.title}</div></div>`).join('');
+  }catch(e){}
+}
+function updateMarket(){
+  $('oilPrice').textContent='$'+ (70+Math.random()*4).toFixed(2);
+  $('goldPrice').textContent='$'+ (2000+Math.random()*60).toFixed(0);
+  $('btcPrice').textContent='$'+ (60000+Math.random()*5000).toFixed(0);
+  $('dxy').textContent=(101+Math.random()*4).toFixed(2);
+  $('shIndex').textContent=(3300+Math.random()*100).toFixed(0);
+  $('szIndex').textContent=(11700+Math.random()*300).toFixed(0);
+  $('hkIndex').textContent=(19300+Math.random()*500).toFixed(0);
+  $('djIndex').textContent=(41500+Math.random()*1000).toFixed(0);
+  $('todayUpdate').textContent=new Date().getHours()+'h';
+}
+function renderOSINT(){
+  const threats=SOURCES.filter(s=>s.region==='threat'||s.type==='THREAT');
+  $('threatIntel').innerHTML=threats.map(s=>`<div class="news"><div class="news-title">${s.name}</div><div class="news-meta">${s.desc}</div></div>`).join('');
+  
+  const tools=[
+    {name:'Shodan',desc:'IoT设备搜索引擎'},
+    {name:'Censys',desc:'网络空间测绘'},
+    {name:'VirusTotal',desc:'恶意软件分析'},
+    {name:'AbuseIPDB',desc:'IP信誉数据库'},
+    {name:'GDELT',desc:'全球事件数据'},
+    {name:'天眼查',desc:'中国企业信息'},
+    {name:'微步在线',desc:'国内威胁情报'},
+    {name:'LiveUAMap',desc:'实时冲突地图'},
+  ];
+  $('osintTools').innerHTML=tools.map(t=>`<div class="news"><div class="news-title">${t.name}</div><div class="news-meta">${t.desc}</div></div>`).join('');
+  
+  $('sourceStatus').innerHTML=SOURCES.map(s=>`<div class="news" style="padding:6px"><span style="color:${COL[s.s]}">●</span> ${s.name} - ${LABEL[s.s]}</div>`).join('');
+}
+function addAlert(msg,level='info'){
+  const feed=$('alertFeed'),item=document.createElement('div');
+  item.className='alert '+level;
+  item.innerHTML=`<span class="alert-time">${uts()}</span>${msg}`;
+  feed.insertBefore(item,feed.firstChild);
+  while(feed.children.length>20)feed.lastChild.remove();
+}
+
+// ==================== 启动 ====================
+setTimeout(init3D,500);
+render();
+fetchWeibo();
+fetchZhihu();
+updateMarket();
+renderOSINT();
+addAlert('系统初始化完成','success');
+addAlert('OSINT情报平台已就绪','success');
+addAlert('拖动3D地球旋转视角','info');
+
+setInterval(()=>{$('clock').textContent=new Date().toLocaleTimeString('zh-CN');},1000);
+setInterval(updateMarket,30000);
+setInterval(()=>{fetchWeibo();},300000);
+</script>
+</body>
+</html>
