@@ -8,13 +8,14 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <style>
 :root{
 --bg-primary:#0a0e14;
 --bg-secondary:#11151c;
 --bg-tertiary:#1a1f2a;
+--bg-hover:#232a3a;
 --border:#2a3040;
+--border-light:#3a4050;
 --text-primary:#e6edf3;
 --text-secondary:#8b949e;
 --text-muted:#6e7681;
@@ -23,120 +24,105 @@
 --accent-orange:#d29922;
 --accent-red:#f85149;
 --accent-purple:#a371f7;
+--accent-cyan:#39d0d6;
 --glow-blue:0 0 20px rgba(88,166,255,0.3);
+--glow-red:0 0 20px rgba(248,81,73,0.3);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-primary);font-family:'Inter','Noto Sans SC',sans-serif;font-size:13px;color:var(--text-primary)}
-#APP{display:grid;grid-template-rows:52px 1fr 32px;height:100vh}
-/* 顶部导航 */
-.topbar{background:linear-gradient(180deg,#151a24 0%,#0d1117 100%);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:24px}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
-.logo-text{font-family:'JetBrains Mono';font-size:13px;font-weight:500;letter-spacing:.05em}
+#APP{display:grid;grid-template-rows:56px 1fr 36px;height:100vh}
+.topbar{background:linear-gradient(180deg,#151a24 0%,#0d1117 100%);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:24px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:var(--glow-blue)}
+.logo-text{font-family:'JetBrains Mono';font-size:14px;font-weight:600;letter-spacing:.1em;background:linear-gradient(90deg,var(--accent-blue),var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .nav{display:flex;gap:4px}
-.nav-item{padding:8px 16px;font-size:12px;color:var(--text-secondary);cursor:pointer;border-radius:6px;transition:all .15s}
+.nav-item{padding:10px 18px;font-size:12px;color:var(--text-secondary);cursor:pointer;border-radius:6px;transition:all .15s;position:relative}
 .nav-item:hover{background:var(--bg-tertiary);color:var(--text-primary)}
-.nav-item.active{background:rgba(88,166,255,.15);color:var(--accent-blue)}
-.search-box{flex:1;max-width:400px;position:relative}
-.search-box input{width:100%;padding:8px 12px 8px 36px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none}
-.search-box input:focus{border-color:var(--accent-blue);box-shadow:var(--glow-blue)}
-.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)}
-.status-bar{display:flex;align-items:center;gap:12px;margin-left:auto}
-.status-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
-.status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-green)}
+.nav-item.active{background:rgba(88,166,255,.12);color:var(--accent-blue)}
+.nav-item.active::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--accent-blue);border-radius:1px}
+.search-box{flex:1;max-width:500px;position:relative}
+.search-box input{width:100%;padding:10px 14px 10px 40px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:12px;outline:none;transition:all .2s}
+.search-box input:focus{border-color:var(--accent-blue);box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px}
+.status-bar{display:flex;align-items:center;gap:16px;margin-left:auto}
+.status-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);padding:6px 12px;background:var(--bg-tertiary);border-radius:6px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-green);animation:pulse 2s infinite}
 .status-dot.warning{background:var(--accent-orange)}
-.status-dot.danger{background:var(--accent-red)}
-/* 主布局 */
-.main{display:grid;grid-template-columns:280px 1fr 380px;overflow:hidden}
-/* 左侧边栏 */
-.sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column}
-.sb-header{padding:16px;border-bottom:1px solid var(--border)}
-.sb-title{font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:.1em;margin-bottom:12px}
-.sb-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sb-stat{padding:10px;background:var(--bg-tertiary);border-radius:6px}
-.sb-stat-val{font-family:'JetBrains Mono';font-size:18px;font-weight:500}
-.sb-stat-label{font-size:10px;color:var(--text-muted);margin-top:2px}
+.status-dot.danger{background:var(--accent-red);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.main{display:grid;grid-template-columns:300px 1fr 420px;overflow:hidden}
+.sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-header{padding:20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--bg-tertiary) 0%,var(--bg-secondary) 100%)}
+.sb-title{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.15em;margin-bottom:16px}
+.sb-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sb-stat{padding:12px 8px;background:var(--bg-primary);border-radius:8px;text-align:center;border:1px solid var(--border)}
+.sb-stat-val{font-family:'JetBrains Mono';font-size:18px;font-weight:600;color:var(--accent-blue)}
+.sb-stat-label{font-size:9px;color:var(--text-muted);margin-top:4px}
 .sb-section{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.sb-tabs{display:flex;border-bottom:1px solid var(--border)}
-.sb-tab{flex:1;padding:10px;text-align:center;font-size:11px;color:var(--text-muted);cursor:pointer}
-.sb-tab:hover{color:var(--text-primary)}
-.sb-tab.active{color:var(--accent-blue);border-bottom:2px solid var(--accent-blue)}
-.sb-list{flex:1;overflow-y:auto;padding:8px}
-.source-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:4px;background:var(--bg-tertiary);border-radius:6px;cursor:pointer;transition:all .15s}
-.source-item:hover{background:#232a3a}
-.source-item.active{border:1px solid var(--accent-blue);background:rgba(88,166,255,.1)}
-.source-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.source-name{font-size:12px;flex:1}
-.source-type{font-size:10px;color:var(--text-muted);padding:2px 6px;background:var(--bg-primary);border-radius:4px}
-/* 中间画布 */
+.sb-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg-primary)}
+.sb-tab{flex:1;padding:14px;text-align:center;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent}
+.sb-tab:hover{color:var(--text-primary);background:var(--bg-tertiary)}
+.sb-tab.active{color:var(--accent-blue);border-bottom-color:var(--accent-blue);background:var(--bg-tertiary)}
+.sb-list{flex:1;overflow-y:auto;padding:12px}
+.source-item{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:6px;background:var(--bg-tertiary);border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.source-item:hover{background:var(--bg-hover);transform:translateX(4px)}
+.source-item.active{border-color:var(--accent-blue);background:rgba(88,166,255,.1)}
+.source-status{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor}
+.source-info{flex:1;min-width:0}
+.source-name{font-size:12px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.source-desc{font-size:10px;color:var(--text-muted)}
+.source-type{font-size:9px;padding:3px 8px;background:var(--bg-primary);border-radius:4px;color:var(--text-muted)}
 .canvas{position:relative;background:var(--bg-primary);overflow:hidden}
 #GLOBE{position:absolute;inset:0}
 #MAP{position:absolute;inset:0;display:none}
 #MAP.active{display:block}
-.canvas-overlay{position:absolute;inset:0;pointer-events:none}
-.canvas-controls{position:absolute;left:16px;top:16px;z-index:100;display:flex;flex-direction:column;gap:8px}
-.canvas-btn{padding:10px 16px;background:rgba(17,21,28,.9);border:1px solid var(--border);color:var(--text-secondary);font-size:11px;cursor:pointer;border-radius:6px;backdrop-filter:blur(10px);transition:all .15s;pointer-events:auto}
-.canvas-btn:hover{background:rgba(26,31,42,.95);color:var(--text-primary)}
+.canvas-controls{position:absolute;left:20px;top:20px;z-index:100;display:flex;flex-direction:column;gap:8px}
+.canvas-btn{padding:12px 18px;background:rgba(17,21,28,.9);border:1px solid var(--border);color:var(--text-secondary);font-size:11px;cursor:pointer;border-radius:8px;backdrop-filter:blur(10px);transition:all .15s;display:flex;align-items:center;gap:8px}
+.canvas-btn:hover{background:rgba(26,31,42,.95);color:var(--text-primary);transform:translateX(4px)}
 .canvas-btn.active{background:var(--accent-blue);color:var(--bg-primary);border-color:var(--accent-blue)}
-.canvas-info{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(17,21,28,.9);padding:8px 16px;border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono';font-size:11px;color:var(--text-muted);backdrop-filter:blur(10px)}
+.canvas-info{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(17,21,28,.9);padding:10px 20px;border:1px solid var(--border);border-radius:8px;font-family:'JetBrains Mono';font-size:11px;color:var(--text-muted);backdrop-filter:blur(10px)}
 .canvas-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-primary);z-index:50}
-.loader{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent-blue);border-radius:50%;animation:spin 1s linear infinite}
+.loader{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent-blue);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* 3D标记 */
-.marker{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer}
-.marker-dot{width:12px;height:12px;border-radius:50%;background:var(--accent-blue);box-shadow:var(--glow-blue);transition:all .2s}
-.marker:hover .marker-dot{transform:scale(1.5)}
-.marker-label{position:absolute;left:16px;top:0;white-space:nowrap;font-size:10px;color:var(--text-primary);background:rgba(17,21,28,.9);padding:4px 8px;border-radius:4px;opacity:0;transition:opacity .2s}
-.marker:hover .marker-label{opacity:1}
-/* 右侧面板 */
-.panel{background:var(--bg-secondary);border-left:1px solid var(--border);display:flex;flex-direction:column}
-.panel-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.panel-title{font-size:12px;font-weight:500;letter-spacing:.05em}
+.panel{background:var(--bg-secondary);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,var(--bg-tertiary) 0%,var(--bg-secondary) 100%)}
+.panel-title{font-size:12px;font-weight:600;letter-spacing:.08em}
 .panel-actions{display:flex;gap:8px}
-.panel-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);cursor:pointer}
-.panel-btn:hover{color:var(--text-primary)}
-.panel-tabs{display:flex;border-bottom:1px solid var(--border)}
-.panel-tab{flex:1;padding:12px;text-align:center;font-size:11px;color:var(--text-muted);cursor:pointer}
+.panel-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.panel-btn:hover{color:var(--text-primary);border-color:var(--accent-blue)}
+.panel-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg-primary)}
+.panel-tab{flex:1;padding:14px;text-align:center;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent}
 .panel-tab:hover{color:var(--text-primary)}
-.panel-tab.active{color:var(--accent-blue);border-bottom:2px solid var(--accent-blue)}
-.panel-body{flex:1;overflow-y:auto;padding:12px}
-/* 情报卡片 */
-.intel-card{padding:14px;background:var(--bg-tertiary);border-radius:8px;margin-bottom:10px;border-left:3px solid var(--accent-blue)}
-.intel-card.critical{border-left-color:var(--accent-red)}
-.intel-card.warning{border-left-color:var(--accent-orange)}
+.panel-tab.active{color:var(--accent-blue);border-bottom-color:var(--accent-blue)}
+.panel-body{flex:1;overflow-y:auto;padding:16px}
+.intel-card{padding:16px;background:var(--bg-tertiary);border-radius:10px;margin-bottom:12px;border-left:4px solid var(--accent-blue);transition:all .15s}
+.intel-card:hover{transform:translateX(-4px);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.intel-card.critical{border-left-color:var(--accent-red);background:linear-gradient(90deg,rgba(248,81,73,.1) 0%,var(--bg-tertiary) 100%)}
+.intel-card.warning{border-left-color:var(--accent-orange);background:linear-gradient(90deg,rgba(210,153,34,.1) 0%,var(--bg-tertiary) 100%)}
 .intel-card.success{border-left-color:var(--accent-green)}
-.intel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.intel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.intel-source{font-size:10px;padding:4px 10px;background:var(--bg-primary);border-radius:4px;color:var(--accent-blue)}
 .intel-time{font-family:'JetBrains Mono';font-size:10px;color:var(--text-muted)}
-.intel-title{font-size:13px;line-height:1.5;margin-bottom:8px}
+.intel-title{font-size:13px;line-height:1.6;margin-bottom:10px}
 .intel-meta{display:flex;gap:12px;font-size:10px;color:var(--text-muted)}
-.intel-source{padding:2px 6px;background:var(--bg-primary);border-radius:4px}
-/* 数据网格 */
-.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.data-cell{padding:14px;background:var(--bg-tertiary);border-radius:8px}
-.data-cell-label{font-size:10px;color:var(--text-muted);margin-bottom:6px}
-.data-cell-value{font-family:'JetBrains Mono';font-size:20px;font-weight:500}
-.data-cell-value.up{color:var(--accent-green)}
-.data-cell-value.down{color:var(--accent-red)}
-.data-cell-change{font-size:11px;margin-top:4px}
-/* 威胁等级 */
-.threat-meter{height:8px;background:var(--bg-primary);border-radius:4px;overflow:hidden;margin:12px 0}
-.threat-fill{height:100%;background:linear-gradient(90deg,var(--accent-green),var(--accent-orange),var(--accent-red));transition:width .5s}
-.threat-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px}
-/* 底部状态栏 */
-.footer{background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;font-size:10px;color:var(--text-muted)}
-.footer-item{padding:0 12px;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px;height:32px}
+.intel-tag{padding:2px 8px;background:var(--bg-primary);border-radius:4px}
+.threat-section{padding:16px;background:var(--bg-tertiary);border-radius:10px;margin-bottom:16px}
+.threat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.threat-title{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--text-muted)}
+.threat-level{font-family:'JetBrains Mono';font-size:24px;font-weight:700;color:var(--accent-red)}
+.threat-bar{height:10px;background:var(--bg-primary);border-radius:5px;overflow:hidden;margin:12px 0}
+.threat-fill{height:100%;background:linear-gradient(90deg,var(--accent-green),var(--accent-orange),var(--accent-red));transition:width .5s ease}
+.threat-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted)}
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.data-cell{padding:16px;background:var(--bg-tertiary);border-radius:10px;border:1px solid var(--border)}
+.data-cell-label{font-size:10px;color:var(--text-muted);margin-bottom:8px}
+.data-cell-value{font-family:'JetBrains Mono';font-size:22px;font-weight:600}
+.data-cell-change{font-size:11px;margin-top:6px}
+.up{color:var(--accent-green)}
+.down{color:var(--accent-red)}
+.footer{background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 20px;font-size:10px;color:var(--text-muted)}
+.footer-item{padding:0 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px;height:36px}
 .footer-item:last-child{border-right:none;margin-left:auto}
-/* 弹窗 */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200}
-.modal.active{display:flex}
-.modal-content{width:90%;max-width:800px;max-height:80vh;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-size:14px;font-weight:500}
-.modal-close{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted)}
-.modal-body{padding:20px;overflow-y:auto;max-height:calc(80vh - 60px)}
-/* 图表 */
-.chart-container{width:100%;height:200px;margin:12px 0}
-/* 滚动条 */
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:var(--bg-primary)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -145,58 +131,46 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-primary);fo
 </head>
 <body>
 <div id="APP">
-  <!-- 顶部导航 -->
   <div class="topbar">
-    <div class="logo">
-      <div class="logo-icon">◈</div>
-      <span class="logo-text">GOTHAM</span>
-    </div>
+    <div class="logo"><div class="logo-icon">◈</div><span class="logo-text">GOTHAM</span></div>
     <div class="nav">
       <div class="nav-item active" data-v="intel">情报</div>
       <div class="nav-item" data-v="globe">地球</div>
+      <div class="nav-item" data-v="graph">图谱</div>
+      <div class="nav-item" data-v="timeline">时间线</div>
       <div class="nav-item" data-v="data">数据</div>
-      <div class="nav-item" data-v="analysis">分析</div>
       <div class="nav-item" data-v="settings">设置</div>
     </div>
     <div class="search-box">
       <span class="search-icon">⌕</span>
-      <input type="text" placeholder="搜索情报、事件、位置..." id="globalSearch">
+      <input type="text" placeholder="搜索情报、事件、位置、实体..." id="globalSearch">
     </div>
     <div class="status-bar">
       <div class="status-item"><div class="status-dot"></div>系统正常</div>
-      <div class="status-item"><div class="status-dot warning"></div>威胁等级: 5</div>
-      <div class="status-item"><div class="status-dot"></div><span id="clock">00:00:00</span></div>
+      <div class="status-item"><div class="status-dot danger"></div>威胁等级: 5</div>
+      <div class="status-item" id="clock">00:00:00</div>
     </div>
   </div>
-
-  <!-- 主区域 -->
   <div class="main">
-    <!-- 左侧边栏 -->
     <div class="sidebar">
       <div class="sb-header">
         <div class="sb-title">本体映射 · ONTOLOGY MAPPING</div>
         <div class="sb-stats">
-          <div class="sb-stat">
-            <div class="sb-stat-val" id="sourceCount">15</div>
-            <div class="sb-stat-label">活跃数据源</div>
-          </div>
-          <div class="sb-stat">
-            <div class="sb-stat-val" id="eventCount">247</div>
-            <div class="sb-stat-label">事件节点</div>
-          </div>
+          <div class="sb-stat"><div class="sb-stat-val" id="sourceCount">15</div><div class="sb-stat-label">数据源</div></div>
+          <div class="sb-stat"><div class="sb-stat-val" id="entityCount">2,847</div><div class="sb-stat-label">实体</div></div>
+          <div class="sb-stat"><div class="sb-stat-val" id="eventCount">1,293</div><div class="sb-stat-label">事件</div></div>
+          <div class="sb-stat"><div class="sb-stat-val" id="relationCount">8,456</div><div class="sb-stat-label">关系</div></div>
         </div>
       </div>
       <div class="sb-section">
         <div class="sb-tabs">
           <div class="sb-tab active" data-t="sources">数据源</div>
-          <div class="sb-tab" data-t="events">事件</div>
           <div class="sb-tab" data-t="entities">实体</div>
+          <div class="sb-tab" data-t="locations">位置</div>
         </div>
         <div class="sb-list" id="sourceList"></div>
       </div>
     </div>
-
-    <!-- 中间画布 -->
     <div class="canvas">
       <div class="canvas-loading" id="loading"><div class="loader"></div></div>
       <canvas id="GLOBE"></canvas>
@@ -204,137 +178,83 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-primary);fo
       <div class="canvas-controls">
         <button class="canvas-btn active" id="btn3D">◉ 3D地球</button>
         <button class="canvas-btn" id="btn2D">⬡ 2D地图</button>
-        <button class="canvas-btn" id="btnGraph">◇ 关系图</button>
+        <button class="canvas-btn" id="btnGraph">◇ 关系图谱</button>
         <button class="canvas-btn" id="btnTimeline">≡ 时间线</button>
       </div>
-      <div class="canvas-info" id="canvasInfo">拖动旋转 · 滚轮缩放</div>
+      <div class="canvas-info" id="canvasInfo">拖动旋转 · 滚轮缩放 · 点击标记查看详情</div>
     </div>
-
-    <!-- 右侧面板 -->
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">情报流 INTELLIGENCE FEED</span>
         <div class="panel-actions">
-          <div class="panel-btn" title="刷新">↻</div>
+          <div class="panel-btn" title="刷新" onclick="refreshIntel()">↻</div>
           <div class="panel-btn" title="筛选">⊕</div>
         </div>
       </div>
       <div class="panel-tabs">
-        <div class="panel-tab active" data-p="intel">情报</div>
+        <div class="panel-tab active" data-p="intel">全部</div>
         <div class="panel-tab" data-p="threat">威胁</div>
         <div class="panel-tab" data-p="market">市场</div>
         <div class="panel-tab" data-p="alert">告警</div>
       </div>
-      <div class="panel-body">
-        <!-- 威胁等级 -->
-        <div class="intel-card critical">
-          <div class="intel-header">
-            <span class="intel-source">THREAT</span>
-            <span class="intel-time">2026-03-11 22:00</span>
+      <div class="panel-body" id="panelBody">
+        <div class="threat-section">
+          <div class="threat-header">
+            <span class="threat-title">全局威胁等级 THREAT LEVEL</span>
+            <span class="threat-level" id="threatLevel">5</span>
           </div>
-          <div class="intel-title">霍尔木兹海峡航运量下降70%，原油价格单周涨幅超35%</div>
-          <div class="intel-meta">
-            <span>概率: 95%</span>
-            <span>等级: 5级</span>
-          </div>
+          <div class="threat-bar"><div class="threat-fill" style="width:95%"></div></div>
+          <div class="threat-labels"><span>低风险</span><span>中风险</span><span>高风险</span><span>极风险</span></div>
         </div>
-        
-        <div class="threat-meter">
-          <div class="threat-fill" style="width:95%"></div>
-        </div>
-        <div class="threat-label">
-          <span>低风险</span>
-          <span>高风险</span>
-        </div>
-
-        <!-- 市场数据 -->
-        <div class="data-grid" style="margin-top:16px">
-          <div class="data-cell">
-            <div class="data-cell-label">WTI原油</div>
-            <div class="data-cell-value">$92.54</div>
-            <div class="data-cell-change up">+35.63%</div>
-          </div>
-          <div class="data-cell">
-            <div class="data-cell-label">黄金</div>
-            <div class="data-cell-value">$2,847</div>
-            <div class="data-cell-change up">+2.3%</div>
-          </div>
-          <div class="data-cell">
-            <div class="data-cell-label">上证指数</div>
-            <div class="data-cell-value">3,413</div>
-            <div class="data-cell-change up">+0.25%</div>
-          </div>
-          <div class="data-cell">
-            <div class="data-cell-label">比特币</div>
-            <div class="data-cell-value">$68,420</div>
-            <div class="data-cell-change down">-1.2%</div>
-          </div>
-        </div>
-
-        <!-- 实时情报 -->
-        <div style="margin-top:20px">
-          <div class="sb-title">最新情报</div>
-          <div id="intelFeed"></div>
-        </div>
+        <div id="intelFeed"></div>
       </div>
     </div>
   </div>
-
-  <!-- 底部 -->
   <div class="footer">
     <div class="footer-item"><div class="status-dot"></div> 数据源: 15</div>
     <div class="footer-item">API: 正常</div>
     <div class="footer-item">WebGL: 正常</div>
     <div class="footer-item">GOTHAM Engine v1.0</div>
+    <div class="footer-item">© 2026 Global Watch</div>
   </div>
 </div>
-
 <script>
-// ==================== Gotham 本体数据模型 ====================
-// 借鉴Palantir的动态本体理念，将数据映射为统一语义对象
 const ONTOLOGY = {
-  // 实体类型
-  entities: {
-    PERSON: { label: '人物', color: '#a371f7' },
-    LOCATION: { label: '地点', color: '#58a6ff' },
-    EVENT: { label: '事件', color: '#f85149' },
-    ORGANIZATION: { label: '组织', color: '#3fb950' },
-    ASSET: { label: '资产', color: '#d29922' },
-  },
-  // 关系类型
-  relations: {
-    LOCATED_AT: '位于',
-    INVOLVED_IN: '参与',
-    OWNED_BY: '隶属于',
-    TARGETED_BY: '目标为',
-    CONNECTED_TO: '关联',
-  }
+  entities: { PERSON: { label: '人物', color: '#a371f7' }, LOCATION: { label: '地点', color: '#58a6ff' }, EVENT: { label: '事件', color: '#f85149' }, ORGANIZATION: { label: '组织', color: '#3fb950' }, ASSET: { label: '资产', color: '#d29922' }, THREAT: { label: '威胁', color: '#f85149' } },
+  relations: { LOCATED_AT: '位于', INVOLVED_IN: '参与', OWNED_BY: '隶属于', TARGETED_BY: '目标为', CONNECTED_TO: '关联', CONFLICT_WITH: '冲突' }
 };
 
-// ==================== 数据源 ====================
 const SOURCES = [
-  // 核心情报源
-  { id: 'iran', name: '伊朗局势', lat: 32.42, lon: 53.69, type: 'THREAT', status: 'critical', desc: '中东冲突监控', region: 'middle_east' },
-  { id: 'us_military', name: '美军动态', lat: 38.90, lon: -77.04, type: 'MILITARY', status: 'warning', desc: '美国军事部署', region: 'americas' },
-  { id: 'russia', name: '俄罗斯', lat: 55.75, lon: 37.62, type: 'THREAT', status: 'warning', desc: '俄乌局势', region: 'europe' },
-  { id: 'ukraine', name: '乌克兰', lat: 50.45, lon: 30.52, type: 'THREAT', status: 'critical', desc: '战区动态', region: 'europe' },
-  { id: 'china', name: '中国', lat: 39.90, lon: 116.40, type: 'POLITICAL', status: 'normal', desc: '东亚局势', region: 'asia' },
-  { id: 'taiwan', name: '台海', lat: 23.70, lon: 121.00, type: 'THREAT', status: 'warning', desc: '台海局势', region: 'asia' },
-  { id: 'scs', name: '南海', lat: 15.00, lon: 115.00, type: 'THREAT', status: 'warning', desc: '南海争端', region: 'asia' },
-  { id: 'israel', name: '以色列', lat: 31.05, lon: 34.85, type: 'THREAT', status: 'critical', desc: '中东冲突', region: 'middle_east' },
-  { id: 'gulf', name: '霍尔木兹', lat: 26.50, lon: 56.50, type: 'ENERGY', status: 'critical', desc: '能源通道', region: 'middle_east' },
-  { id: 'g7', name: 'G7峰会', lat: 51.50, lon: -0.13, type: 'POLITICAL', status: 'normal', desc: '西方政策', region: 'europe' },
-  { id: 'nato', name: '北约', lat: 50.85, lon: 4.35, type: 'MILITARY', status: 'warning', desc: '军事联盟', region: 'europe' },
-  { id: 'un', name: '联合国', lat: 40.75, lon: -73.97, type: 'ORGANIZATION', status: 'normal', desc: '国际组织', region: 'americas' },
-  // 市场和数据源
-  { id: 'nyse', name: '纽约交所', lat: 40.71, lon: -74.01, type: 'MARKET', status: 'normal', desc: '资本市场', region: 'americas' },
-  { id: 'london', name: '伦敦金交所', lat: 51.50, lon: -0.13, type: 'MARKET', status: 'normal', desc: '贵金属', region: 'europe' },
-  { id: 'shanghai', name: '上交所', lat: 31.23, lon: 121.47, type: 'MARKET', status: 'normal', desc: 'A股市场', region: 'asia' },
+  { id: 'iran', name: '伊朗', lat: 32.42, lon: 53.69, type: 'THREAT', status: 'critical', desc: '伊朗核计划与军事动态', region: 'middle_east', entityCount: 234 },
+  { id: 'israel', name: '以色列', lat: 31.05, lon: 34.85, type: 'THREAT', status: 'critical', desc: '中东冲突核心', region: 'middle_east', entityCount: 156 },
+  { id: 'gulf', name: '霍尔木兹海峡', lat: 26.50, lon: 56.50, type: 'ENERGY', status: 'critical', desc: '全球能源通道', region: 'middle_east', entityCount: 89 },
+  { id: 'iraq', name: '伊拉克', lat: 33.22, lon: 44.36, type: 'THREAT', status: 'warning', desc: '地区冲突热点', region: 'middle_east', entityCount: 67 },
+  { id: 'russia', name: '俄罗斯', lat: 55.75, lon: 37.62, type: 'THREAT', status: 'warning', desc: '俄乌冲突', region: 'europe', entityCount: 445 },
+  { id: 'ukraine', name: '乌克兰', lat: 50.45, lon: 30.52, type: 'THREAT', status: 'critical', desc: '战区动态', region: 'europe', entityCount: 312 },
+  { id: 'nato', name: '北约', lat: 50.85, lon: 4.35, type: 'MILITARY', status: 'warning', desc: '军事联盟', region: 'europe', entityCount: 78 },
+  { id: 'china', name: '中国', lat: 39.90, lon: 116.40, type: 'POLITICAL', status: 'normal', desc: '东亚格局', region: 'asia', entityCount: 567 },
+  { id: 'taiwan', name: '台海', lat: 23.70, lon: 121.00, type: 'THREAT', status: 'warning', desc: '台海局势', region: 'asia', entityCount: 134 },
+  { id: 'scs', name: '南海', lat: 15.00, lon: 115.00, type: 'THREAT', status: 'warning', desc: '南海争端', region: 'asia', entityCount: 98 },
+  { id: 'us', name: '美国', lat: 38.90, lon: -77.04, type: 'MILITARY', status: 'warning', desc: '全球军事部署', region: 'americas', entityCount: 678 },
+  { id: 'nyse', name: '纽约交所', lat: 40.71, lon: -74.01, type: 'MARKET', status: 'normal', desc: '资本市场', region: 'americas', entityCount: 234 },
+  { id: 'london', name: '伦敦金交所', lat: 51.50, lon: -0.13, type: 'MARKET', status: 'normal', desc: '贵金属', region: 'europe', entityCount: 156 },
+  { id: 'shanghai', name: '上交所', lat: 31.23, lon: 121.47, type: 'MARKET', status: 'normal', desc: 'A股市场', region: 'asia', entityCount: 189 },
 ];
+
 const STATUS_COL = { critical: '#f85149', warning: '#d29922', normal: '#3fb950', online: '#3fb950', delayed: '#d29922', offline: '#6e7681' };
 
-// ==================== 3D地球 ====================
-let scene, camera, renderer, globe, markers = [], is3DActive = true;
+const INTEL_DATA = [
+  { time: '22:10', title: '霍尔木兹海峡航运量持续下降，已降至正常水平的30%', source: '能源监控', level: 'critical', tags: ['能源', '航运'] },
+  { time: '21:55', title: '伊朗革命卫队在波斯湾进行军事演习，发射多枚导弹', source: '军事情报', level: 'critical', tags: ['军事', '伊朗'] },
+  { time: '21:42', title: 'WTI原油期货突破95美元/桶，创2026年新高', source: '市场数据', level: 'warning', tags: ['能源', '价格'] },
+  { time: '21:28', title: '美军CVN-78福特号航母战斗群进入阿拉伯海', source: '军事监控', level: 'warning', tags: ['军事', '美国'] },
+  { time: '21:15', title: '联合国安理会召开紧急会议讨论中东局势', source: '国际组织', level: 'normal', tags: ['政治', '联合国'] },
+  { time: '20:58', title: '俄罗斯向伊朗提供S-400防空导弹系统', source: '军事情报', level: 'critical', tags: ['军事', '俄罗斯'] },
+  { time: '20:45', title: '中国外交部呼吁各方保持克制，避免冲突升级', source: '政治动态', level: 'normal', tags: ['政治', '中国'] },
+  { time: '20:32', title: '比特币跌破65000美元，市场避险情绪升温', source: '市场数据', level: 'warning', tags: ['加密货币', '市场'] },
+];
+
+let scene, camera, renderer, globe, is3DActive = true;
 
 function init3D() {
   try {
@@ -344,229 +264,99 @@ function init3D() {
     const w = container.offsetWidth || 800;
     const h = container.offsetHeight || 600;
     renderer.setSize(w, h);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
-
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 1000);
     camera.position.z = 3;
-
-    // 地球
     const earthGeo = new THREE.SphereGeometry(1, 64, 64);
-    const earthMat = new THREE.MeshPhongMaterial({
-      color: 0x1a3a6a,
-      emissive: 0x0a1a2a,
-      emissiveIntensity: 0.3,
-      specular: 0x111111,
-      shininess: 15,
-    });
+    const earthMat = new THREE.MeshPhongMaterial({ color: 0x1a3a6a, emissive: 0x0a1a2a, emissiveIntensity: 0.4, specular: 0x111111, shininess: 15 });
     globe = new THREE.Mesh(earthGeo, earthMat);
     scene.add(globe);
-
-    // 大气层
-    const atmoGeo = new THREE.SphereGeometry(1.03, 64, 64);
-    const atmoMat = new THREE.MeshBasicMaterial({
-      color: 0x4080ff,
-      transparent: true,
-      opacity: 0.08,
-      side: THREE.BackSide
-    });
+    const atmoGeo = new THREE.SphereGeometry(1.04, 64, 64);
+    const atmoMat = new THREE.MeshBasicMaterial({ color: 0x4080ff, transparent: true, opacity: 0.1, side: THREE.BackSide });
     scene.add(new THREE.Mesh(atmoGeo, atmoMat));
-
-    // 光照
-    scene.add(new THREE.AmbientLight(0x404060, 1.5));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    scene.add(new THREE.AmbientLight(0x404060, 1.8));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
     sun.position.set(5, 3, 5);
     scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x4060a0, 0.4);
-    fill.position.set(-5, -3, -5);
-    scene.add(fill);
-
-    // 标记点
     SOURCES.forEach(s => {
       const phi = (90 - s.lat) * Math.PI / 180;
       const theta = (s.lon + 180) * Math.PI / 180;
       const x = -Math.sin(phi) * Math.cos(theta);
       const y = Math.cos(phi);
       const z = Math.sin(phi) * Math.sin(theta);
-
-      const dotGeo = new THREE.SphereGeometry(0.02, 16, 16);
-      const dotMat = new THREE.MeshBasicMaterial({ color: STATUS_COL[s.status].replace('#', '0x') });
+      const color = STATUS_COL[s.status].replace('#', '0x');
+      const dotGeo = new THREE.SphereGeometry(0.025, 16, 16);
+      const dotMat = new THREE.MeshBasicMaterial({ color });
       const dot = new THREE.Mesh(dotGeo, dotMat);
       dot.position.set(x, y, z);
       dot.userData = s;
       globe.add(dot);
-
-      // 光晕
-      const glowGeo = new THREE.SphereGeometry(0.04, 16, 16);
-      const glowMat = new THREE.MeshBasicMaterial({
-        color: STATUS_COL[s.status].replace('#', '0x'),
-        transparent: true,
-        opacity: 0.3
-      });
+      const glowGeo = new THREE.SphereGeometry(0.05, 16, 16);
+      const glowMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25 });
       const glow = new THREE.Mesh(glowGeo, glowMat);
       glow.position.copy(dot.position);
       globe.add(glow);
     });
-
-    // 经纬网格
     const gridGeo = new THREE.SphereGeometry(1.01, 36, 18);
-    const gridMat = new THREE.MeshBasicMaterial({
-      color: 0x4080ff,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.1
-    });
+    const gridMat = new THREE.MeshBasicMaterial({ color: 0x4080ff, wireframe: true, transparent: true, opacity: 0.1 });
     globe.add(new THREE.Mesh(gridGeo, gridMat));
-
-    // 交互
     let isDragging = false, startX, startY;
-    canvas.addEventListener('mousedown', e => {
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      canvas.style.cursor = 'grabbing';
-    });
-    canvas.addEventListener('mouseup', () => {
-      isDragging = false;
-      canvas.style.cursor = 'grab';
-    });
+    canvas.addEventListener('mousedown', e => { isDragging = true; startX = e.clientX; startY = e.clientY; canvas.style.cursor = 'grabbing'; });
+    canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
     canvas.addEventListener('mouseleave', () => isDragging = false);
-    canvas.addEventListener('mousemove', e => {
-      if (isDragging && globe) {
-        globe.rotation.y += (e.clientX - startX) * 0.004;
-        globe.rotation.x += (e.clientY - startY) * 0.004;
-        startX = e.clientX;
-        startY = e.clientY;
-      }
-    });
-    canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      camera.position.z += e.deltaY * 0.001;
-      camera.position.z = Math.max(1.5, Math.min(5, camera.position.z));
-    });
-
-    function animate() {
-      if (is3DActive && globe) {
-        globe.rotation.y += 0.0003;
-        renderer.render(scene, camera);
-      }
-      requestAnimationFrame(animate);
-    }
+    canvas.addEventListener('mousemove', e => { if (isDragging && globe) { globe.rotation.y += (e.clientX - startX) * 0.004; globe.rotation.x += (e.clientY - startY) * 0.004; startX = e.clientX; startY = e.clientY; } });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); camera.position.z += e.deltaY * 0.001; camera.position.z = Math.max(1.5, Math.min(5, camera.position.z)); });
+    function animate() { if (is3DActive && globe) { globe.rotation.y += 0.0003; renderer.render(scene, camera); } requestAnimationFrame(animate); }
     animate();
-
     document.getElementById('loading').style.display = 'none';
-  } catch (e) {
-    document.getElementById('loading').innerHTML = `<div style="color:#f85149">3D加载失败: ${e.message}</div>`;
-  }
+  } catch (e) { document.getElementById('loading').innerHTML = `<div style="color:#f85149">3D加载失败: ${e.message}</div>`; }
 }
 
-// ==================== 2D地图 ====================
 let map;
 function initMap() {
   map = L.map('MAP', { center: [30, 50], zoom: 2, zoomControl: false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-  SOURCES.forEach(s => {
-    L.circleMarker([s.lat, s.lon], {
-      radius: 8,
-      fillColor: STATUS_COL[s.status],
-      color: '#fff',
-      weight: 1,
-      fillOpacity: 0.9
-    }).addTo(map).bindPopup(`<b>${s.name}</b><br>${s.desc}`);
-  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+  SOURCES.forEach(s => { L.circleMarker([s.lat, s.lon], { radius: 10, fillColor: STATUS_COL[s.status], color: '#fff', weight: 1, fillOpacity: 0.9 }).addTo(map).bindPopup(`<b>${s.name}</b><br>${s.desc}`); });
 }
 
-// ==================== UI交互 ====================
 function renderSources() {
-  const list = document.getElementById('sourceList');
-  list.innerHTML = SOURCES.map(s => `
+  document.getElementById('sourceList').innerHTML = SOURCES.map(s => `
     <div class="source-item" data-id="${s.id}">
-      <div class="source-dot" style="background:${STATUS_COL[s.status]}"></div>
-      <span class="source-name">${s.name}</span>
-      <span class="source-type">${s.type}</span>
+      <div class="source-status" style="background:${STATUS_COL[s.status]}"></div>
+      <div class="source-info">
+        <div class="source-name">${s.name}</div>
+        <div class="source-desc">${s.desc} · ${s.entityCount}实体</div>
+      </div>
+      <div class="source-type">${s.type}</div>
     </div>
   `).join('');
 }
 
 function renderIntel() {
-  const feed = document.getElementById('intelFeed');
-  const events = [
-    { time: '22:05', title: '伊朗最高领袖发表讲话', source: '伊朗', level: 'critical' },
-    { time: '21:48', title: '美军航母战斗群进入波斯湾', source: '美军', level: 'warning' },
-    { time: '21:32', title: 'WTI原油突破90美元/桶', source: '市场', level: 'normal' },
-    { time: '21:15', title: '俄罗斯向伊朗提供军事支持', source: '俄罗斯', level: 'critical' },
-    { time: '20:55', title: '中国呼吁各方保持克制', source: '中国', level: 'normal' },
-  ];
-  feed.innerHTML = events.map(e => `
-    <div class="intel-card ${e.level}">
+  document.getElementById('intelFeed').innerHTML = INTEL_DATA.map(i => `
+    <div class="intel-card ${i.level}">
       <div class="intel-header">
-        <span class="intel-source">${e.source}</span>
-        <span class="intel-time">${e.time}</span>
+        <span class="intel-source">${i.source}</span>
+        <span class="intel-time">${i.time}</span>
       </div>
-      <div class="intel-title">${e.title}</div>
+      <div class="intel-title">${i.title}</div>
+      <div class="intel-meta">${i.tags.map(t => `<span class="intel-tag">${t}</span>`).join('')}</div>
     </div>
   `).join('');
 }
 
-// Tab切换
-document.querySelectorAll('.nav-item').forEach(t => {
-  t.onclick = () => {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-  };
-});
+function refreshIntel() { renderIntel(); }
 
-document.querySelectorAll('.sb-tab').forEach(t => {
-  t.onclick = () => {
-    document.querySelectorAll('.sb-tab').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-  };
-});
-
-document.querySelectorAll('.panel-tab').forEach(t => {
-  t.onclick = () => {
-    document.querySelectorAll('.panel-tab').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-  };
-});
-
-// 3D/2D切换
-document.getElementById('btn3D').onclick = function() {
-  is3DActive = true;
-  document.getElementById('GLOBE').style.display = 'block';
-  document.getElementById('MAP').classList.remove('active');
-  document.getElementById('btn3D').classList.add('active');
-  document.getElementById('btn2D').classList.remove('active');
-  document.getElementById('canvasInfo').textContent = '拖动旋转 · 滚轮缩放';
-};
-
-document.getElementById('btn2D').onclick = function() {
-  is3DActive = false;
-  document.getElementById('GLOBE').style.display = 'none';
-  document.getElementById('MAP').classList.add('active');
-  document.getElementById('btn2D').classList.add('active');
-  document.getElementById('btn3D').classList.remove('active');
-  document.getElementById('canvasInfo').textContent = '2D地图模式';
-  if (!map) initMap();
-};
-
-document.getElementById('btnGraph').onclick = function() {
-  document.getElementById('canvasInfo').textContent = '关系图谱分析';
-};
-
-document.getElementById('btnTimeline').onclick = function() {
-  document.getElementById('canvasInfo').textContent = '时间线视图';
-};
-
-// 时钟
-setInterval(() => {
-  document.getElementById('clock').textContent = new Date().toLocaleTimeString('zh-CN');
-}, 1000);
-
-// ==================== 初始化 ====================
+document.querySelectorAll('.nav-item').forEach(t => { t.onclick = () => { document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); t.classList.add('active'); }; });
+document.querySelectorAll('.sb-tab').forEach(t => { t.onclick = () => { document.querySelectorAll('.sb-tab').forEach(x => x.classList.remove('active')); t.classList.add('active'); }; });
+document.querySelectorAll('.panel-tab').forEach(t => { t.onclick = () => { document.querySelectorAll('.panel-tab').forEach(x => x.classList.remove('active')); t.classList.add('active'); }; });
+document.getElementById('btn3D').onclick = function() { is3DActive = true; document.getElementById('GLOBE').style.display = 'block'; document.getElementById('MAP').classList.remove('active'); document.getElementById('btn3D').classList.add('active'); document.getElementById('btn2D').classList.remove('active'); document.getElementById('canvasInfo').textContent = '拖动旋转 · 滚轮缩放 · 点击标记查看详情'; };
+document.getElementById('btn2D').onclick = function() { is3DActive = false; document.getElementById('GLOBE').style.display = 'none'; document.getElementById('MAP').classList.add('active'); document.getElementById('btn2D').classList.add('active'); document.getElementById('btn3D').classList.remove('active'); document.getElementById('canvasInfo').textContent = '2D地图模式'; if (!map) initMap(); };
+document.getElementById('btnGraph').onclick = function() { document.getElementById('canvasInfo').textContent = '关系图谱分析模式'; };
+document.getElementById('btnTimeline').onclick = function() { document.getElementById('canvasInfo').textContent = '时间线视图模式'; };
+setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('zh-CN'); }, 1000);
 setTimeout(init3D, 300);
 renderSources();
 renderIntel();
